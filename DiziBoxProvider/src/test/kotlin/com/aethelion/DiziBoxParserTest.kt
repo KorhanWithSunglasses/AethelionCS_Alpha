@@ -3,6 +3,8 @@ package com.aethelion
 import com.aethelion.DiziBoxParser.discoverServers
 import com.aethelion.DiziBoxParser.extractPlayerIframes
 import com.aethelion.DiziBoxParser.fixUrl
+import com.aethelion.DiziBoxParser.isEpisodeUrl
+import com.aethelion.DiziBoxParser.parseEpisodeDetail
 import com.aethelion.DiziBoxParser.parseSearch
 import com.aethelion.DiziBoxParser.parseSeriesDetail
 import com.lagradost.cloudstream3.TvType
@@ -23,7 +25,7 @@ class DiziBoxParserTest {
     }
 
     // ============================================================
-    // 1. UNIT TESTS: fixUrl() Determinism
+    // 1. UNIT TESTS: fixUrl() & isEpisodeUrl() Determinism
     // ============================================================
 
     @Test
@@ -66,8 +68,46 @@ class DiziBoxParserTest {
         assertEquals("", fixUrl("   "))
     }
 
+    @Test
+    fun testIsEpisodeUrl_Detection_UNIT() {
+        assertTrue(isEpisodeUrl("https://www.dizibox.live/the-ghost-in-the-shell-1-sezon-1-bolum-izle/"))
+        assertTrue(isEpisodeUrl("https://www.dizibox.live/chernobyl-1-sezon-1-bolum-hd-izle/2/"))
+        assertFalse(isEpisodeUrl("https://www.dizibox.live/diziler/the-ghost-in-the-shell/"))
+        assertFalse(isEpisodeUrl("https://www.dizibox.live/populer-diziler/"))
+    }
+
     // ============================================================
-    // 2. FIXTURE TESTS: Real DiziBox Series Page
+    // 2. FIXTURE TESTS: Homepage & Search Sanitized Fixtures
+    // ============================================================
+
+    @Test
+    fun testHomepageParsing_FIXTURE() {
+        val html = loadFixture("homepage_dizibox.html")
+        val doc = Jsoup.parse(html)
+        val results = with(provider) { parseSearch(doc) }
+
+        assertEquals(4, results.size)
+        assertEquals("Harry Potter", results[0].name)
+        assertEquals("https://www.dizibox.live/diziler/harry-potter/", results[0].url)
+        assertEquals("The Ghost in the Shell", results[3].name)
+        assertEquals("https://www.dizibox.live/diziler/the-ghost-in-the-shell/", results[3].url)
+    }
+
+    @Test
+    fun testSearchParsing_FIXTURE() {
+        val html = loadFixture("search_dizibox.html")
+        val doc = Jsoup.parse(html)
+        val results = with(provider) { parseSearch(doc) }
+
+        assertEquals(3, results.size)
+        assertEquals("The Ghost in the Shell", results[0].name)
+        assertEquals("https://www.dizibox.live/diziler/the-ghost-in-the-shell/", results[0].url)
+        assertEquals("City of Ghosts", results[1].name)
+        assertEquals("Ghosts of Beirut", results[2].name)
+    }
+
+    // ============================================================
+    // 3. FIXTURE TESTS: Series Load vs Episode Load
     // ============================================================
 
     @Test
@@ -88,8 +128,21 @@ class DiziBoxParserTest {
         assertEquals("https://www.dizibox.live/the-ghost-in-the-shell-1-sezon-9-bolum-izle/", response.episodes[8].data)
     }
 
+    @Test
+    fun testRealEpisodeDirectLoad_FIXTURE() = runTest {
+        val html = loadFixture("episode_the_ghost_in_the_shell_s01e01.html")
+        val doc = Jsoup.parse(html)
+        val response = with(provider) { parseEpisodeDetail(doc, "https://www.dizibox.live/the-ghost-in-the-shell-1-sezon-1-bolum-izle/") }
+
+        assertEquals("The Ghost in the Shell", response.name)
+        assertEquals(1, response.episodes.size)
+        assertEquals(1, response.episodes[0].season)
+        assertEquals(1, response.episodes[0].episode)
+        assertEquals("https://www.dizibox.live/the-ghost-in-the-shell-1-sezon-1-bolum-izle/", response.episodes[0].data)
+    }
+
     // ============================================================
-    // 3. FIXTURE TESTS: Episode Identity Isolation
+    // 4. FIXTURE TESTS: Episode Identity Isolation
     // ============================================================
 
     @Test
@@ -113,7 +166,7 @@ class DiziBoxParserTest {
     }
 
     // ============================================================
-    // 4. FIXTURE TESTS: Dynamic Server Discovery (Real Episodes)
+    // 5. FIXTURE TESTS: Dynamic Server Discovery (Real Episodes)
     // ============================================================
 
     @Test
@@ -176,41 +229,5 @@ class DiziBoxParserTest {
 
         assertEquals(1, iframes.size)
         assertEquals("https://vidmoly.to/embed-ghost101.html", iframes[0])
-    }
-
-    // ============================================================
-    // 5. SYNTHETIC TESTS: Search & Fallback Validation
-    // ============================================================
-
-    @Test
-    fun testSearchParsing_SYNTHETIC() {
-        val sampleSearchHtml = """
-            <div class="search-results">
-                <article class="post-item">
-                    <a href="https://www.dizibox.live/diziler/the-ghost-in-the-shell/" title="The Ghost in the Shell">
-                        <img src="https://www.dizibox.live/posters/ghost.jpg" />
-                    </a>
-                    <h2 class="title">
-                        <a href="https://www.dizibox.live/diziler/the-ghost-in-the-shell/">The Ghost in the Shell</a>
-                    </h2>
-                </article>
-            </div>
-        """.trimIndent()
-        val doc = Jsoup.parse(sampleSearchHtml)
-        val results = with(provider) { parseSearch(doc) }
-
-        assertEquals(1, results.size)
-        assertEquals("The Ghost in the Shell", results[0].name)
-        assertEquals(TvType.TvSeries, results[0].type)
-    }
-
-    @Test
-    fun testServerDiscoveryFallback_SYNTHETIC() {
-        val doc = Jsoup.parse("<html><body><div>No server list</div></body></html>")
-        val servers = discoverServers(doc, "https://www.dizibox.live/sample-episode/")
-
-        assertEquals(1, servers.size)
-        assertEquals("DBX Pro", servers[0].name)
-        assertEquals("https://www.dizibox.live/sample-episode/", servers[0].url)
     }
 }

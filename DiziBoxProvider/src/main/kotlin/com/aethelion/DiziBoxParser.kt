@@ -6,9 +6,6 @@ import org.jsoup.nodes.Document
 
 object DiziBoxParser {
 
-    /**
-     * Safely normalizes absolute, protocol-relative, root-relative, and relative URLs.
-     */
     fun fixUrl(url: String, baseUrl: String = "https://www.dizibox.live"): String {
         val trimmed = url.trim()
         if (trimmed.isBlank()) return ""
@@ -19,20 +16,23 @@ object DiziBoxParser {
         return "$cleanBase/$cleanPath"
     }
 
+    fun isEpisodeUrl(url: String): Boolean {
+        return url.contains("-bolum-") || url.contains("-sezon-")
+    }
+
     fun MainAPI.parseSearch(document: Document): List<SearchResponse> {
         val results = mutableListOf<SearchResponse>()
-        val items = document.select("article.post-item, div.dizi-kutu, div.post-item, div.kutu")
+        val items = document.select("article.search-card, a.series-card, article.post-item, div.dizi-kutu")
 
         items.forEach { element ->
-            val titleElement = element.selectFirst("h2, h3, a.title, .dizi-adi, .title")
-            val linkElement = element.selectFirst("a[href]") ?: titleElement?.selectFirst("a")
+            val titleElement = element.selectFirst("h3.title, span, h2, .dizi-adi")
+            val linkElement = if (element.tagName() == "a") element else element.selectFirst("a[href]")
             val imgElement = element.selectFirst("img")
 
             val title = titleElement?.text()?.trim() ?: linkElement?.attr("title")?.trim()
             val href = linkElement?.attr("href")?.trim()
-            val posterUrl = imgElement?.attr("data-src")?.ifEmpty { null }
-                ?: imgElement?.attr("data-original")?.ifEmpty { null }
-                ?: imgElement?.attr("src")?.ifEmpty { null }
+            val posterUrl = imgElement?.attr("src")?.ifEmpty { null }
+                ?: imgElement?.attr("data-src")?.ifEmpty { null }
 
             if (!title.isNullOrBlank() && !href.isNullOrBlank()) {
                 results.add(
@@ -46,23 +46,23 @@ object DiziBoxParser {
     }
 
     suspend fun MainAPI.parseSeriesDetail(document: Document, url: String): TvSeriesLoadResponse {
-        val title = document.selectFirst("div.dizi-header a.link-unstyled, h1.dizi-adi, h1.entry-title, div.dizi-bilgi h1, h1")?.text()?.trim()
+        val title = document.selectFirst("div.dizi-header a.link-unstyled, h1.dizi-adi, h1")?.text()?.trim()
             ?: "Bilinmeyen Dizi"
 
-        val poster = document.selectFirst("div.dizi-afis img, div.poster img, img.dizi-poster, div.thumb img")?.let { img ->
-            img.attr("data-src").ifEmpty { img.attr("data-original").ifEmpty { img.attr("src") } }
+        val poster = document.selectFirst("div.dizi-afis img, div.poster img, img.dizi-poster")?.let { img ->
+            img.attr("src").ifEmpty { img.attr("data-src") }
         }
 
-        val plot = document.selectFirst("div.dizi-header p.description, div.dizi-ozet, div.entry-content p, div.ozet")?.text()?.trim()
+        val plot = document.selectFirst("div.dizi-header p.description, div.dizi-ozet")?.text()?.trim()
 
-        val yearText = document.selectFirst("div.meta a[href*='/yil/'], span.yil, div.dizi-bilgi span:contains(Yapım)")?.text()
+        val yearText = document.selectFirst("div.meta a[href*='/yil/'], span.yil")?.text()
         val year = Regex("""\b(19\d{2}|20\d{2})\b""").find(yearText ?: "")?.value?.toIntOrNull()
 
-        val tags = document.select("div.meta a[href*='/tur/'], div.kategoriler a, div.tur a").map { it.text().trim() }.filter { it.isNotBlank() }
-        val actors = document.select("div.oyuncular a, div.cast a, div.actors a").map { it.text().trim() }.filter { it.isNotBlank() }
+        val tags = document.select("div.meta a[href*='/tur/'], div.kategoriler a").map { it.text().trim() }.filter { it.isNotBlank() }
+        val actors = document.select("div.oyuncular a, div.cast a").map { it.text().trim() }.filter { it.isNotBlank() }
 
         val episodes = mutableListOf<Episode>()
-        val episodeElements = document.select("div.episodes-list a.season-episode, ul.bolum-listesi li a, div.sezon-bolumleri a")
+        val episodeElements = document.select("div.episodes-list a.season-episode, ul.bolum-listesi li a")
 
         episodeElements.forEach { el ->
             val epHref = el.attr("href").trim()
@@ -94,6 +94,25 @@ object DiziBoxParser {
         }
     }
 
+    suspend fun MainAPI.parseEpisodeDetail(document: Document, url: String): TvSeriesLoadResponse {
+        val titleText = document.selectFirst("h1.dizi-adi, h1")?.text()?.trim() ?: "Bilinmeyen Bölüm"
+        val seriesTitle = Regex("""^(.*?)\s+\d+\.\s*Sezon""").find(titleText)?.groupValues?.get(1)?.trim()
+            ?: titleText
+
+        val seasonNum = Regex("""(?i)(\d+)\.?\s*sezon""").find(titleText)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val episodeNum = Regex("""(?i)(\d+)\.?\s*b[oö]l[uü]m""").find(titleText)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+
+        val singleEpisode = newEpisode(data = fixUrl(url)) {
+            this.name = titleText
+            this.season = seasonNum
+            this.episode = episodeNum
+        }
+
+        return newTvSeriesLoadResponse(seriesTitle, url, TvType.TvSeries, listOf(singleEpisode)) {
+            this.plot = document.selectFirst("div.episode-summary, div.description, p")?.text()?.trim()
+        }
+    }
+
     fun discoverServers(document: Document, episodeBaseUrl: String): List<DiziBoxServerOption> {
         val servers = mutableListOf<DiziBoxServerOption>()
 
@@ -122,7 +141,6 @@ object DiziBoxParser {
     }
 
     fun extractPlayerIframes(document: Document): List<String> {
-        // Specific player iframe selectors to avoid picking up ad/tracker iframes
         return document.select("div#player iframe, div.video-embed iframe, div.player-container iframe, div.player-wrapper iframe")
             .mapNotNull { it.attr("src").trim().ifEmpty { null } }
             .map { fixUrl(it) }

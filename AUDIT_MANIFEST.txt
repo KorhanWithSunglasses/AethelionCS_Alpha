@@ -1,6 +1,6 @@
 ============================================================
-AETHELIONCS PHASE 1 CORRECTED IMPLEMENTATION AUDIT MANIFEST
-TIMESTAMP: 2026-09-02T18:48:00+03:00
+AETHELIONCS PHASE 1 CORRECTED AUDIT V2 MANIFEST
+TIMESTAMP: 2026-09-02T18:56:00+03:00
 ============================================================
 
 .agents/rules/00-core-truth.md                                              | Size:     761 B | SHA256: 1E82FADABCA873814160D94FAB09208537BB59ADD6D32465FEB046108FFAEF0E
@@ -30,13 +30,15 @@ build.gradle.kts                                                            | Si
 DiziBoxProvider/build.gradle.kts                                            | Size:     306 B | SHA256: C868D2A5867D23E954661676A2FB23C1200B68F7FCF6CEF15B95F6FBFE7463DB
 DiziBoxProvider/src/main/AndroidManifest.xml                                | Size:      82 B | SHA256: BFE643676C7BFECF2683B1AD8044A754BC53141C9E4FC6714AD58C1530937B6D
 DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxModels.kt              | Size:      99 B | SHA256: ADC056D5725C39F4D2E491C94494B52B5AB5188A57218943A2E29DBE5A72CE9D
-DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxParser.kt              | Size:    6459 B | SHA256: 6D0B59FD225D21751211AE3222867BEDA26D9F4101A356FD2B12F57312291285
+DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxParser.kt              | Size:    7106 B | SHA256: 4C2408C93B6E0860E75EB6082FCCC92A0C033C176B97D5D7D7B68F997A9D7A61
 DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxPlugin.kt              | Size:     270 B | SHA256: 3EE16439D89AD2213A9C4C01835AEDD264CB7E0FCB64FA172585922F465FCCF4
-DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxProvider.kt            | Size:    2969 B | SHA256: C044503FFC09C8BC919C820BAD4A7A20726D17ED19737463F53F611879F962FC
-DiziBoxProvider/src/test/kotlin/com/aethelion/DiziBoxParserTest.kt          | Size:    9086 B | SHA256: 1BA7C492E3D816E5EF720B40CD7395DA9C39C65F4AD8424EF63F1762ACF11413
+DiziBoxProvider/src/main/kotlin/com/aethelion/DiziBoxProvider.kt            | Size:    3181 B | SHA256: 8B21EE00278CF36A45C772420F95593B6914A21F1A1C0B82662840F31EC7ACA9
+DiziBoxProvider/src/test/kotlin/com/aethelion/DiziBoxParserTest.kt          | Size:   10053 B | SHA256: EDC99A4DC71B0D8E448FD258DAC71FD56F9827D645A47E0D89E34ED0F1D167AE
 DiziBoxProvider/src/test/resources/fixtures/episode_chernobyl_s01e01.html   | Size:    1837 B | SHA256: 2517709A1D65605E6785D97622E699F63549FF8D885688482E29D8C91C96A068
 DiziBoxProvider/src/test/resources/fixtures/episode_the_ghost_in_the_shell_s01e01.html | Size:    1939 B | SHA256: EC7C5F4F0C76F57DAD8BF07B8EE2EB23E927ED52179D7117B0821273BFABD204
 DiziBoxProvider/src/test/resources/fixtures/episode_the_ghost_in_the_shell_s01e02.html | Size:    2084 B | SHA256: 51F8B02E30D8DACA02632F94B13247A2E91F75945110E10B6115CA2EC497346E
+DiziBoxProvider/src/test/resources/fixtures/homepage_dizibox.html           | Size:    2353 B | SHA256: 9D1364F15DC17E3249832CB50BC1B0D3DA943AD12BD9335DD2252983AE60C5DA
+DiziBoxProvider/src/test/resources/fixtures/search_dizibox.html             | Size:    1913 B | SHA256: 8F9C9E60061CBAAF1952DAFDD4ADBEDF991C5BC6AFFAF32638B2D733838EB76E
 DiziBoxProvider/src/test/resources/fixtures/series_the_ghost_in_the_shell.html | Size:    4614 B | SHA256: 91972D5F6261B63319F50699D2F332A3EF2A17803BC1CB7850E079EF6ADF2185
 docs/ACCEPTANCE_TEST_PLAN.md                                                | Size:    2316 B | SHA256: 02312BDB950E2C41C79C184B333CF08C469A30F8425D36606B2A016348E0BBDA
 docs/ACTIVE_PROVIDER_PATTERNS.md                                            | Size:    3906 B | SHA256: D3ED5AC107A4B5A8DDF5E77B8A8D7F09F0DE5CD5A19D207349F6E295DF8FA2C4

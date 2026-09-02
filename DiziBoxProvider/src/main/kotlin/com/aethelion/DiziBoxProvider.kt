@@ -2,6 +2,8 @@ package com.aethelion
 
 import com.aethelion.DiziBoxParser.discoverServers
 import com.aethelion.DiziBoxParser.extractPlayerIframes
+import com.aethelion.DiziBoxParser.isEpisodeUrl
+import com.aethelion.DiziBoxParser.parseEpisodeDetail
 import com.aethelion.DiziBoxParser.parseSearch
 import com.aethelion.DiziBoxParser.parseSeriesDetail
 import com.lagradost.cloudstream3.*
@@ -43,7 +45,11 @@ class DiziBoxProvider : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse {
         val document = app.get(url).document
-        return parseSeriesDetail(document, url)
+        return if (isEpisodeUrl(url)) {
+            parseEpisodeDetail(document, url)
+        } else {
+            parseSeriesDetail(document, url)
+        }
     }
 
     override suspend fun loadLinks(
