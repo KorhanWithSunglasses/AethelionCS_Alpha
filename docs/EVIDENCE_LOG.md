@@ -2,37 +2,42 @@
 
 This log records raw command outputs, logs, and artifacts supporting entries in the Truth Ledger.
 
-## Entry BRAIN-EV-001: Canonical AGENTS.md Verification
-- **Source:** Filesystem inspection
-- **Target:** `AGENTS.md`
+## Entry CS-EV-001: Unit Test Suite Execution
+- **Source:** Gradle test task
+- **Command:** `gradlew.bat test`
 - **Output:**
   ```text
-  Canonical AGENTS.md verified present at repository root.
-  Rules: No fabrication, evidence gate, 10-tier test hierarchy, conflict handling.
+  > Task :DiziBoxProvider:compileDebugUnitTestKotlin
+  > Task :DiziBoxProvider:compileReleaseUnitTestKotlin
+  > Task :DiziBoxProvider:testDebugUnitTest
+  > Task :DiziBoxProvider:testReleaseUnitTest
+  > Task :DiziBoxProvider:test
+  BUILD SUCCESSFUL in 1m 10s
+  30 actionable tasks: 8 executed, 22 up-to-date
   ```
 - **Status:** VERIFIED
-- **Date:** 2026-09-02T15:00:00+03:00
+- **Date:** 2026-09-02T18:24:06+03:00
 - **Commit:** HEAD
 
-## Entry BRAIN-EV-002: Modular Rules Directory Inspection
-- **Source:** Filesystem inspection
-- **Target:** `.agents/rules/`
+## Entry CS-EV-002: Packaging & DEX Purity Verification
+- **Source:** Gradle make & jar tools
+- **Command:** `gradlew.bat make makePluginsJson`
 - **Output:**
   ```text
-  Verified 9 modular rules: 00-core-truth.md through 80-reporting.md.
+  Made CloudStream cross-platform package at DiziBoxProvider\build\DiziBoxProvider.jar
+  SUCCESS: The cross-platform JAR file does not contain Android imports.
+  Made CloudStream package at DiziBoxProvider\build\DiziBoxProvider.cs3
+  Created build\plugins.json
+  BUILD SUCCESSFUL in 32s
   ```
-- **Status:** VERIFIED
-- **Date:** 2026-09-02T15:00:00+03:00
-- **Commit:** HEAD
-
-## Entry BRAIN-EV-003: Community Sources Isolation
-- **Source:** Filesystem inspection
-- **Target:** `docs/agent-brain-sources/`
-- **Output:**
+- **JAR Class Inspection:**
   ```text
-  Community repositories isolated in docs/agent-brain-sources/ as reference-only.
-  Zero community rules auto-loaded into active agent runtime.
+  com/aethelion/DiziBoxParser.class
+  com/aethelion/DiziBoxPlugin.class
+  com/aethelion/DiziBoxProvider.class
+  com/aethelion/DiziBoxServerOption.class
   ```
+  Zero `com/lagradost/cloudstream3/*` duplicate classes found in package.
 - **Status:** VERIFIED
-- **Date:** 2026-09-02T15:00:00+03:00
+- **Date:** 2026-09-02T18:24:46+03:00
 - **Commit:** HEAD
