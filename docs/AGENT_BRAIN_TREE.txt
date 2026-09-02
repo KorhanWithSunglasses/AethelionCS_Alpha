@@ -1,0 +1,47 @@
+AGENT BRAIN COMPONENT TREE:
+
+  [FILE] AGENTS.md (5053 bytes)
+  [FILE] GEMINI.md (1034 bytes)
+  [DIR]  .agents/
+    [DIR]  .agents/rules/
+      [FILE] 00-core-truth.md (656 bytes)
+      [FILE] 10-evidence.md (1930 bytes)
+      [FILE] 20-testing.md (1238 bytes)
+      [FILE] 30-research.md (674 bytes)
+      [FILE] 40-debugging.md (823 bytes)
+      [FILE] 50-git.md (598 bytes)
+      [FILE] 60-security.md (571 bytes)
+      [FILE] 70-change-control.md (564 bytes)
+      [FILE] 80-reporting.md (557 bytes)
+    [DIR]  .agents/skills/
+      [DIR]  .agents/skills/change-planning/
+        [FILE] SKILL.md (544 bytes)
+      [DIR]  .agents/skills/forensic-debug/
+        [FILE] SKILL.md (873 bytes)
+      [DIR]  .agents/skills/release-audit/
+        [FILE] SKILL.md (602 bytes)
+      [DIR]  .agents/skills/upstream-research/
+        [FILE] SKILL.md (645 bytes)
+      [DIR]  .agents/skills/verification/
+        [FILE] SKILL.md (797 bytes)
+    [DIR]  .agents/workflows/
+      [FILE] implement.md (388 bytes)
+      [FILE] plan-change.md (408 bytes)
+      [FILE] release.md (372 bytes)
+      [FILE] research-first.md (440 bytes)
+      [FILE] verify.md (326 bytes)
+  [DIR]  docs/
+    [FILE] AGENT_BRAIN_FILE_MAP.md (5712 bytes)
+    [FILE] AGENT_BRAIN_TREE.txt (1650 bytes)
+    [FILE] AGENT_CANARY.md (145 bytes)
+    [FILE] AGENT_DECISIONS.md (933 bytes)
+    [FILE] AGENT_SOURCES.md (1485 bytes)
+    [FILE] EVIDENCE_LOG.md (1086 bytes)
+    [FILE] RUNTIME_MATRIX.md (1046 bytes)
+    [FILE] TRUTH_LEDGER.md (950 bytes)
+    [DIR]  docs/agent-brain/
+      [FILE] AGENT_ARCHITECTURE.md (941 bytes)
+      [FILE] AGENT_BEHAVIOR.md (678 bytes)
+      [FILE] FAILURE_PROTOCOL.md (682 bytes)
+      [FILE] PASS_GATE.md (833 bytes)
+      [FILE] TEST_HIERARCHY.md (1231 bytes)

@@ -1,0 +1,8 @@
+CANARY_ID:
+AETHELION-TRUTH-001
+
+RULE:
+UNVERIFIED CLAIMS MUST NOT BE REPORTED AS VERIFIED.
+
+PURPOSE:
+Verify that the workspace agent rules are actually loaded.
