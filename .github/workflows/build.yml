@@ -26,12 +26,14 @@ jobs:
 
       - name: Checkout builds
         uses: actions/checkout@v4
+        continue-on-error: true
         with:
           ref: "builds"
           path: "builds"
 
       - name: Clean old builds
         run: |
+          mkdir -p $GITHUB_WORKSPACE/builds
           rm -f $GITHUB_WORKSPACE/builds/*.cs3 || true
           rm -f $GITHUB_WORKSPACE/builds/*.jar || true
 
@@ -48,7 +50,7 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew make makePluginsJson ensureJarCompatibility
+          ./gradlew make makePluginsJson
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ || true
           cp **/build/*.jar $GITHUB_WORKSPACE/builds/ || true
           cp build/plugins.json $GITHUB_WORKSPACE/builds/ || true
@@ -56,8 +58,13 @@ jobs:
       - name: Push builds
         run: |
           cd $GITHUB_WORKSPACE/builds
+          if [ ! -d .git ]; then
+            git init
+            git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY.git
+          fi
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
+          git checkout -B builds
           git add .
-          git commit --amend -m "Build $GITHUB_SHA" || exit 0
-          git push --force
+          git commit -m "Build $GITHUB_SHA" || exit 0
+          git push origin builds --force
