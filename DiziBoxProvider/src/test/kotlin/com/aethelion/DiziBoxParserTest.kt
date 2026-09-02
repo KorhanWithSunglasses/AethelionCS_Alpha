@@ -230,4 +230,15 @@ class DiziBoxParserTest {
         assertEquals(1, iframes.size)
         assertEquals("https://vidmoly.to/embed-ghost101.html", iframes[0])
     }
+
+    @Test
+    fun testProviderHeaders_UserAgent_UNIT() {
+        assertEquals(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            DiziBoxProvider.USER_AGENT
+        )
+        assertTrue(DiziBoxProvider.requestHeaders.containsKey("User-Agent"))
+        assertEquals(DiziBoxProvider.USER_AGENT, DiziBoxProvider.requestHeaders["User-Agent"])
+    }
 }
+
