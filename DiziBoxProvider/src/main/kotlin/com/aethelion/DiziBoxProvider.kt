@@ -4,7 +4,9 @@ import com.aethelion.DiziBoxParser.discoverServers
 import com.aethelion.DiziBoxParser.extractPlayerIframes
 import com.aethelion.DiziBoxParser.isEpisodeUrl
 import com.aethelion.DiziBoxParser.parseEpisodeDetail
+import com.aethelion.DiziBoxParser.parseEpisodes
 import com.aethelion.DiziBoxParser.parseSearch
+import com.aethelion.DiziBoxParser.parseSeries
 import com.aethelion.DiziBoxParser.parseSeriesDetail
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.mvvm.safeApiCall
@@ -41,7 +43,11 @@ class DiziBoxProvider : MainAPI() {
     ): HomePageResponse {
         val targetUrl = if (page <= 1) request.data else "${request.data.removeSuffix("/")}/page/$page/"
         val document = getDocument(targetUrl)
-        val items = parseSearch(document)
+        val items = when (request.name) {
+            "Son Eklenen Bölümler" -> parseEpisodes(document).ifEmpty { parseSearch(document) }
+            "Tüm Diziler", "Popüler Diziler" -> parseSeries(document).ifEmpty { parseSearch(document) }
+            else -> parseSearch(document)
+        }
         return newHomePageResponse(
             listOf(HomePageList(request.name, items)),
             hasNext = items.isNotEmpty()
@@ -50,8 +56,12 @@ class DiziBoxProvider : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> {
         val searchUrl = "$mainUrl/?s=$query"
-        val document = getDocument(searchUrl)
-        return parseSearch(document)
+        return try {
+            val document = getDocument(searchUrl)
+            parseSearch(document)
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {

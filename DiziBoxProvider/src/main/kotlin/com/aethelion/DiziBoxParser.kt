@@ -3,6 +3,7 @@ package com.aethelion
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 
 object DiziBoxParser {
 
@@ -20,73 +21,105 @@ object DiziBoxParser {
         return url.contains("-bolum-") || url.contains("-sezon-")
     }
 
-    fun MainAPI.parseSearch(document: Document): List<SearchResponse> {
-        val results = mutableListOf<SearchResponse>()
-        val items = document.select("article.search-card, a.series-card, article.post-item, div.dizi-kutu")
+    private fun MainAPI.extractCard(element: Element): SearchResponse? {
+        val titleElement = element.selectFirst(
+            "a.episode-card-title, a.poster-title, span.post_title, h3.title, .dizi-adi, h2, b.series-name, span"
+        )
+        val title = titleElement?.attr("title")?.takeIf { it.isNotBlank() }
+            ?: titleElement?.text()?.trim()
 
-        items.forEach { element ->
-            val titleElement = element.selectFirst("h3.title, span, h2, .dizi-adi")
-            val linkElement = if (element.tagName() == "a") element else element.selectFirst("a[href]")
-            val imgElement = element.selectFirst("img")
+        val linkElement = if (element.tagName() == "a") element else element.selectFirst(
+            "a.episode-card-title, a.poster-title, a[href]"
+        )
+        val href = linkElement?.attr("href")?.trim()
 
-            val title = titleElement?.text()?.trim() ?: linkElement?.attr("title")?.trim()
-            val href = linkElement?.attr("href")?.trim()
-            val posterUrl = imgElement?.attr("src")?.ifEmpty { null }
-                ?: imgElement?.attr("data-src")?.ifEmpty { null }
+        val imgElement = element.selectFirst(
+            "img.afis, img.wp-post-image, img.post_thumb, img.main-cover, a.figure-link img, figure img"
+        )
+        val rawPoster = imgElement?.attr("data-src")?.takeIf { it.isNotBlank() }
+            ?: imgElement?.attr("src")?.takeIf { !it.startsWith("data:") && it.isNotBlank() }
+        val posterUrl = rawPoster?.let { fixUrl(it) }
 
-            if (!title.isNullOrBlank() && !href.isNullOrBlank()) {
-                results.add(
-                    newTvSeriesSearchResponse(title, fixUrl(href), TvType.TvSeries) {
-                        this.posterUrl = posterUrl?.let { fixUrl(it) }
-                    }
-                )
+        if (!title.isNullOrBlank() && !href.isNullOrBlank()) {
+            return newTvSeriesSearchResponse(title, fixUrl(href), TvType.TvSeries) {
+                this.posterUrl = posterUrl
             }
         }
-        return results
+        return null
+    }
+
+    fun MainAPI.parseEpisodes(document: Document): List<SearchResponse> {
+        val items = document.select("article.article-episode-card, article.article-episode-small-grid")
+        return items.mapNotNull { extractCard(it) }
+    }
+
+    fun MainAPI.parseSeries(document: Document): List<SearchResponse> {
+        val items = document.select("article.article-series-poster, article.article-series-small-grid, a.series-card")
+        return items.mapNotNull { extractCard(it) }
+    }
+
+    fun MainAPI.parseSearch(document: Document): List<SearchResponse> {
+        val items = document.select(
+            "article.article-episode-card, article.article-series-poster, ul.dwls_search_results > a, ul.search_results > a, article.search-card, a.series-card, article.post-item, div.dizi-kutu"
+        )
+        return items.mapNotNull { extractCard(it) }
     }
 
     suspend fun MainAPI.parseSeriesDetail(document: Document, url: String): TvSeriesLoadResponse {
-        val title = document.selectFirst("div.dizi-header a.link-unstyled, h1.dizi-adi, h1")?.text()?.trim()
+        val title = document.selectFirst("h1.entry-title, div.dizi-header a.link-unstyled, h1.dizi-adi, h1")?.text()?.trim()
             ?: "Bilinmeyen Dizi"
 
-        val poster = document.selectFirst("div.dizi-afis img, div.poster img, img.dizi-poster")?.let { img ->
-            img.attr("src").ifEmpty { img.attr("data-src") }
-        }
+        val img = document.selectFirst("img.main-cover, figure#main-cover img, div.dizi-afis img, div.poster img, img.dizi-poster, img.afis")
+        val rawPoster = img?.attr("data-src")?.takeIf { it.isNotBlank() }
+            ?: img?.attr("src")?.takeIf { !it.startsWith("data:") && it.isNotBlank() }
+        val poster = rawPoster?.let { fixUrl(it) }
 
-        val plot = document.selectFirst("div.dizi-header p.description, div.dizi-ozet")?.text()?.trim()
+        val plot = document.selectFirst("div.tv-story p, div.tv-story, div.dizi-header p.description, div.dizi-ozet")?.text()?.trim()
 
-        val yearText = document.selectFirst("div.meta a[href*='/yil/'], span.yil")?.text()
+        val yearText = document.selectFirst("a[href*='/yil/'], div.meta a[href*='/yil/'], span.yil, div.release")?.text()
         val year = Regex("""\b(19\d{2}|20\d{2})\b""").find(yearText ?: "")?.value?.toIntOrNull()
 
-        val tags = document.select("div.meta a[href*='/tur/'], div.kategoriler a").map { it.text().trim() }.filter { it.isNotBlank() }
+        val tags = document.select("a[href*='/tur/'], div.meta a[href*='/tur/'], div.kategoriler a")
+            .map { it.text().trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
         val actors = document.select("div.oyuncular a, div.cast a").map { it.text().trim() }.filter { it.isNotBlank() }
 
         val episodes = mutableListOf<Episode>()
-        val episodeElements = document.select("div.episodes-list a.season-episode, ul.bolum-listesi li a")
+        val seenUrls = mutableSetOf<String>()
+        val episodeElements = document.select(".post-title a, div.episodes-list a.season-episode, ul.bolum-listesi li a, div.bolumler a, a[href*='-bolum-']")
 
         episodeElements.forEach { el ->
-            val epHref = el.attr("href").trim()
+            val epHref = fixUrl(el.attr("href").trim())
             val epText = el.text().trim()
 
-            if (epHref.isNotBlank()) {
-                val seasonNum = Regex("""(?i)(\d+)\.?\s*sezon""").find(epText)?.groupValues?.get(1)?.toIntOrNull()
-                    ?: Regex("""(?i)s(\d+)""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
-                    ?: 1
-                val episodeNum = Regex("""(?i)(\d+)\.?\s*b[oö]l[uü]m""").find(epText)?.groupValues?.get(1)?.toIntOrNull()
-                    ?: Regex("""(?i)e(\d+)""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
+            if (epHref.isNotBlank() && isEpisodeUrl(epHref) && !seenUrls.contains(epHref)) {
+                val hasEpInfo = Regex("""(?i)(\d+)\.?\s*(sezon|b[oö]l[uü]m)""").containsMatchIn(epText) ||
+                        Regex("""(?i)-(\d+)-sezon-(\d+)-bolum""").containsMatchIn(epHref)
+                if (hasEpInfo) {
+                    seenUrls.add(epHref)
+                    val seasonNum = Regex("""(?i)(\d+)\.?\s*sezon""").find(epText)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: Regex("""(?i)-(\d+)-sezon-""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: Regex("""(?i)s(\d+)""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: 1
+                    val episodeNum = Regex("""(?i)(\d+)\.?\s*b[oö]l[uü]m""").find(epText)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: Regex("""(?i)-(\d+)-bolum""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: Regex("""(?i)e(\d+)""").find(epHref)?.groupValues?.get(1)?.toIntOrNull()
+                        ?: 1
 
-                episodes.add(
-                    newEpisode(data = fixUrl(epHref)) {
-                        this.name = epText.ifBlank { "$seasonNum. Sezon $episodeNum. Bölüm" }
-                        this.season = seasonNum
-                        this.episode = episodeNum
-                    }
-                )
+                    episodes.add(
+                        newEpisode(data = epHref) {
+                            this.name = epText.ifBlank { "$seasonNum. Sezon $episodeNum. Bölüm" }
+                            this.season = seasonNum
+                            this.episode = episodeNum
+                        }
+                    )
+                }
             }
         }
 
         return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-            this.posterUrl = poster?.let { fixUrl(it) }
+            this.posterUrl = poster
             this.plot = plot
             this.year = year
             this.tags = tags
@@ -95,7 +128,7 @@ object DiziBoxParser {
     }
 
     suspend fun MainAPI.parseEpisodeDetail(document: Document, url: String): TvSeriesLoadResponse {
-        val titleText = document.selectFirst("h1.dizi-adi, h1")?.text()?.trim() ?: "Bilinmeyen Bölüm"
+        val titleText = document.selectFirst("h1.entry-title, h1.dizi-adi, h1")?.text()?.trim() ?: "Bilinmeyen Bölüm"
         val seriesTitle = Regex("""^(.*?)\s+\d+\.\s*Sezon""").find(titleText)?.groupValues?.get(1)?.trim()
             ?: titleText
 
@@ -109,7 +142,7 @@ object DiziBoxParser {
         }
 
         return newTvSeriesLoadResponse(seriesTitle, url, TvType.TvSeries, listOf(singleEpisode)) {
-            this.plot = document.selectFirst("div.episode-summary, div.description, p")?.text()?.trim()
+            this.plot = document.selectFirst("div.tv-story p, div.tv-story, div.episode-summary, div.description, p")?.text()?.trim()
         }
     }
 
