@@ -1,11 +1,11 @@
 [
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=www.dizibox.live&sz=%size%",
-        "jarFileSize": 76105,
-        "fileHash": "sha256-17499b8a8d079e80b07e7a75fd783f48cf910264c196fcf7f1cc228528550da5",
+        "jarFileSize": 80545,
+        "fileHash": "sha256-6e164d031c1734cbfb66ba6870bb76665b8adc03b5372f076f54732c96467a6f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/KorhanWithSunglasses/AethelionCS_Alpha",
-        "fileSize": 18828,
+        "fileSize": 19952,
         "status": 1,
         "authors": [
             "Aethelion"
@@ -13,12 +13,12 @@
         "tvTypes": [
             "TvSeries"
         ],
-        "version": 2,
+        "version": 3,
         "internalName": "DiziBoxProvider",
         "jarUrl": "https://raw.githubusercontent.com/KorhanWithSunglasses/AethelionCS_Alpha/builds/DiziBoxProvider.jar",
         "description": "Watch foreign TV series with Turkish localization from DiziBox",
         "url": "https://raw.githubusercontent.com/KorhanWithSunglasses/AethelionCS_Alpha/builds/DiziBoxProvider.cs3",
         "name": "DiziBoxProvider",
-        "jarHash": "sha256-561a17ff28f82cd85f12f54e6711494692abb124351f2a56e627477968a748da"
+        "jarHash": "sha256-e89f6f2e82f6b6418a7a5f5fc2b5c50456702d958d6b221e8cc7d6014cbcef8b"
     }
 ]
