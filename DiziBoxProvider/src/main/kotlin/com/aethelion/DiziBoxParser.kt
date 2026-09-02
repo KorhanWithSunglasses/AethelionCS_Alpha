@@ -6,15 +6,22 @@ import org.jsoup.nodes.Document
 
 object DiziBoxParser {
 
+    /**
+     * Safely normalizes absolute, protocol-relative, root-relative, and relative URLs.
+     */
     fun fixUrl(url: String, baseUrl: String = "https://www.dizibox.live"): String {
-        return if (url.startsWith("//")) "https:$url"
-        else if (url.startsWith("/")) "${baseUrl.trimEnd('/')}/$url".replace("(?<!:)//+".toRegex(), "/")
-        else url
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return ""
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed
+        if (trimmed.startsWith("//")) return "https:$trimmed"
+        val cleanBase = baseUrl.trimEnd('/')
+        val cleanPath = trimmed.trimStart('/')
+        return "$cleanBase/$cleanPath"
     }
 
     fun MainAPI.parseSearch(document: Document): List<SearchResponse> {
         val results = mutableListOf<SearchResponse>()
-        val items = document.select("article.post-item, div.dizi-kutu, div.post-item, div.kutu, div.search-item, div.dizi-item")
+        val items = document.select("article.post-item, div.dizi-kutu, div.post-item, div.kutu")
 
         items.forEach { element ->
             val titleElement = element.selectFirst("h2, h3, a.title, .dizi-adi, .title")
@@ -39,23 +46,23 @@ object DiziBoxParser {
     }
 
     suspend fun MainAPI.parseSeriesDetail(document: Document, url: String): TvSeriesLoadResponse {
-        val title = document.selectFirst("h1.dizi-adi, h1.entry-title, div.dizi-bilgi h1, h1")?.text()?.trim()
+        val title = document.selectFirst("div.dizi-header a.link-unstyled, h1.dizi-adi, h1.entry-title, div.dizi-bilgi h1, h1")?.text()?.trim()
             ?: "Bilinmeyen Dizi"
 
         val poster = document.selectFirst("div.dizi-afis img, div.poster img, img.dizi-poster, div.thumb img")?.let { img ->
             img.attr("data-src").ifEmpty { img.attr("data-original").ifEmpty { img.attr("src") } }
         }
 
-        val plot = document.selectFirst("div.dizi-ozet, div.entry-content p, div.ozet, div.plot, p.description")?.text()?.trim()
+        val plot = document.selectFirst("div.dizi-header p.description, div.dizi-ozet, div.entry-content p, div.ozet")?.text()?.trim()
 
-        val yearText = document.selectFirst("span.yil, div.dizi-bilgi span:contains(Yapım), span:contains(Yıl)")?.text()
+        val yearText = document.selectFirst("div.meta a[href*='/yil/'], span.yil, div.dizi-bilgi span:contains(Yapım)")?.text()
         val year = Regex("""\b(19\d{2}|20\d{2})\b""").find(yearText ?: "")?.value?.toIntOrNull()
 
-        val tags = document.select("div.kategoriler a, div.tur a, span.kategori a, div.genres a").map { it.text().trim() }.filter { it.isNotBlank() }
+        val tags = document.select("div.meta a[href*='/tur/'], div.kategoriler a, div.tur a").map { it.text().trim() }.filter { it.isNotBlank() }
         val actors = document.select("div.oyuncular a, div.cast a, div.actors a").map { it.text().trim() }.filter { it.isNotBlank() }
 
         val episodes = mutableListOf<Episode>()
-        val episodeElements = document.select("ul.bolum-listesi li a, div.sezon-bolumleri a, a.bolum-linki, div.bolum a, ul.episodes-list li a")
+        val episodeElements = document.select("div.episodes-list a.season-episode, ul.bolum-listesi li a, div.sezon-bolumleri a")
 
         episodeElements.forEach { el ->
             val epHref = el.attr("href").trim()
@@ -101,7 +108,7 @@ object DiziBoxParser {
 
         // 2. Fallback: Extract from any linkpages list container elements if present
         if (servers.isEmpty()) {
-            document.select("div.woca-linkpages a, ul.woca-linkpages-dd li a, div.linkpages a").forEach { link ->
+            document.select("ul.selectBox-options li a, div.woca-linkpages a, ul.woca-linkpages-dd li a").forEach { link ->
                 val serverName = link.text().trim()
                 val rawUrl = link.attr("href").trim().ifEmpty { link.attr("rel").trim() }
                 if (serverName.isNotBlank() && rawUrl.isNotBlank()) {
@@ -115,7 +122,8 @@ object DiziBoxParser {
     }
 
     fun extractPlayerIframes(document: Document): List<String> {
-        return document.select("div.player-wrapper iframe, div#player iframe, iframe.player-iframe, div.woca-player-container iframe, iframe[src]")
+        // Specific player iframe selectors to avoid picking up ad/tracker iframes
+        return document.select("div#player iframe, div.video-embed iframe, div.player-container iframe, div.player-wrapper iframe")
             .mapNotNull { it.attr("src").trim().ifEmpty { null } }
             .map { fixUrl(it) }
             .filter { it.startsWith("http://") || it.startsWith("https://") }
